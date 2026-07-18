@@ -1,0 +1,29 @@
+{
+  "name": "doccontext",
+  "version": "1.0.0",
+  "description": "Analyzes a Node.js/TypeScript repo, checks documentation health, and generates AI context prompts.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "bin": {
+    "doccontext": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/index.ts",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "commander": "^12.1.0",
+    "fast-glob": "^3.3.2",
+    "zod": "^3.23.8",
+    "unified": "^11.0.5",
+    "remark-parse": "^11.0.0",
+    "unist-util-visit": "^5.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.9",
+    "typescript": "^5.5.2",
+    "tsx": "^4.19.1",
+    "vitest": "^2.1.1"
+  }
+}
