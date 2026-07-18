@@ -1,0 +1,9 @@
+{
+  "name": "fixture-undocumented-scripts",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest",
+    "secret": "node secret.js"
+  }
+}
