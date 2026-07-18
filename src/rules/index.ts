@@ -4,6 +4,8 @@ import { BrokenLinksRule } from './broken-links.js';
 import { UndocumentedScriptsRule } from './undocumented-scripts.js';
 import { UndocumentedEnvRule } from './undocumented-env.js';
 import { RuntimeVersionRule } from './runtime-version.js';
+import { MentionedScriptExistsRule } from './mentioned-scripts.js';
+import { ReadmeQualityRule } from './readme-quality.js';
 
 export interface DocumentationRule {
   id: string;
@@ -17,6 +19,8 @@ export function getAllRules(): DocumentationRule[] {
     new UndocumentedScriptsRule(),
     new UndocumentedEnvRule(),
     new RuntimeVersionRule(),
+    new MentionedScriptExistsRule(),
+    new ReadmeQualityRule(),
   ];
 }
 
@@ -26,4 +30,6 @@ export {
   UndocumentedScriptsRule,
   UndocumentedEnvRule,
   RuntimeVersionRule,
+  MentionedScriptExistsRule,
+  ReadmeQualityRule,
 };

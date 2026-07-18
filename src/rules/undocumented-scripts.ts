@@ -2,6 +2,10 @@ import { DocumentationRule } from './index.js';
 import { Finding, ProjectContext } from '../types/project-context.js';
 import { visit } from 'unist-util-visit';
 
+function escapeRegExp(string: string) {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 export class UndocumentedScriptsRule implements DocumentationRule {
   id = 'DOC003';
   async run(context: ProjectContext): Promise<Finding[]> {
@@ -10,32 +14,62 @@ export class UndocumentedScriptsRule implements DocumentationRule {
     if (!readmeFile) return [];
 
     const ast = context.markdownASTs[readmeFile];
-    if (!ast) return [];
+    const rawContent = context.rawFiles[readmeFile] || '';
 
-    const mentionedScripts = new Set<string>();
-    visit(ast, 'inlineCode', (node: any) => {
-      const value = node.value;
-      const match = /npm run ([a-z0-9:-]+)/.exec(value);
-      if (match) mentionedScripts.add(match[1]);
-    });
+    const ignoredScripts = new Set([
+      'prepare', 'preinstall', 'postinstall', 'prepack', 'postpack',
+      'prebuild', 'postbuild', 'pretest', 'posttest', 'predev', 'postdev',
+      'prestart', 'poststart'
+    ]);
 
-    visit(ast, 'code', (node: any) => {
-      const value = node.value;
-      const lines = value.split('\n');
-      for (const line of lines) {
-        const match = /npm run ([a-z0-9:-]+)/.exec(line);
-        if (match) mentionedScripts.add(match[1]);
+    for (const [scriptName, _cmd] of Object.entries(context.scripts)) {
+      if (ignoredScripts.has(scriptName)) continue;
+      if (scriptName.startsWith('pre') || scriptName.startsWith('post')) continue;
+
+      let mentioned = false;
+
+      // Check raw content for common execution phrases
+      if (
+        rawContent.includes(`npm run ${scriptName}`) ||
+        rawContent.includes(`yarn run ${scriptName}`) ||
+        rawContent.includes(`yarn ${scriptName}`) ||
+        rawContent.includes(`pnpm run ${scriptName}`) ||
+        rawContent.includes(`pnpm ${scriptName}`) ||
+        rawContent.includes(`bun run ${scriptName}`)
+      ) {
+        mentioned = true;
       }
-    });
 
-    for (const script of mentionedScripts) {
-      if (!context.scripts[script]) {
+      if (!mentioned && (scriptName === 'start' || scriptName === 'test')) {
+        if (rawContent.includes(`npm ${scriptName}`) || rawContent.includes(`bun ${scriptName}`)) {
+          mentioned = true;
+        }
+      }
+
+      // Check AST nodes (code, inlineCode, headings, tableCell, listItem)
+      if (!mentioned && ast) {
+        const wordRegex = new RegExp(`\\b${escapeRegExp(scriptName)}\\b`);
+        visit(ast, ['code', 'inlineCode', 'heading', 'tableCell', 'listItem'], (node: any) => {
+          if (mentioned) return;
+          let nodeText = node.value || '';
+          if (!nodeText && node.children) {
+            visit(node, 'text', (t: any) => {
+              nodeText += ' ' + (t.value || '');
+            });
+          }
+          if (wordRegex.test(nodeText)) {
+            mentioned = true;
+          }
+        });
+      }
+
+      if (!mentioned) {
         findings.push({
           ruleId: this.id,
-          severity: 'error',
-          message: `Mentioned script "npm run ${script}" in README does not exist in package.json.`,
+          severity: 'warning',
+          message: `Script "${scriptName}" is defined in package.json but not documented in README.md.`,
           file: readmeFile,
-          evidence: script
+          evidence: scriptName
         });
       }
     }
